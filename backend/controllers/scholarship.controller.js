@@ -1,5 +1,29 @@
 import { Scholarship } from "../models/scholarship.model.js";
 
+const COURSE_ALIASES = {
+  ug: ["ug", "undergraduate", "bachelor", "bachelors", "under-graduate", "degree"],
+  pg: ["pg", "postgraduate", "master", "masters", "post-graduate"],
+  btech: ["b.tech", "btech", "bachelor of technology", "b.e", "engineering"],
+  mtech: ["m.tech", "mtech", "master of technology"],
+  bsc: ["b.sc", "bsc", "bachelor of science"],
+  mba: ["mba", "m.b.a", "master of business administration"],
+  "class 12": ["12th", "class 12", "class xii", "10+2"]
+};
+ 
+const CATEGORY_ALIASES = {
+  women: ["girl", "girls", "female", "women"],
+  "sc/st": ["sc", "st", "dalit", "tribal"],
+  pwd: ["pwd", "disabled", "handicapped"]
+};
+ 
+function resolveAlias(keyword, taxonomyMap) {
+  const kw = keyword.toLowerCase().trim();
+  for (const [canonical, aliases] of Object.entries(taxonomyMap)) {
+    if (aliases.includes(kw)) return canonical;
+  }
+  return null;
+}
+
 export const postscholarship =async (req,res)=>{
     try {
         const {title,description ,special_cat,amount,location,s_Type,grants,gpa,course, deadline,apply_link,companyId} =req.body;
@@ -38,6 +62,9 @@ export const postscholarship =async (req,res)=>{
 export const getAllscholarships =async (req,res)=>{
     try{
         const keyword=req.query.keyword ||"";
+        const courseTag = resolveAlias(keyword, COURSE_ALIASES);
+        const catTag = resolveAlias(keyword, CATEGORY_ALIASES);
+        const searchTerms = [keyword, courseTag, catTag].filter(Boolean);
         let t=0;
         if(keyword==1 ||keyword==2 || keyword==3 || keyword==4){
                t=1;
@@ -49,7 +76,8 @@ export const getAllscholarships =async (req,res)=>{
                     {title:{$regex:keyword,$options:"i"}},  // here i is use so that it become case sensetive
                     {description:{$regex:keyword,$options:"i"}},
                     {eligibility:{$regex:keyword,$options:"i"}},
-                    { course: { $elemMatch: { $regex: keyword, $options: "i" } } },
+                    { course: { $in: searchTerms } },
+                    { special_cat: { $in: searchTerms } },
                     { course: { $elemMatch: { $regex: "All courses", $options: "i" } } }
                 ]
               };
